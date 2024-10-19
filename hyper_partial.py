@@ -236,7 +236,7 @@ def str2bool(s):
     return s == 'True'
 
 
-#os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
+os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
 
 print("*************************************************")
 print("*************************************************")
@@ -244,7 +244,7 @@ print("*************************************************")
 
 data=pd.read_csv("ml1mdataextract.csv")
 data= data.astype({'learner_id': 'int32', 'course_id': 'int32', 'learner_rating': 'int32'})
-print("ML1M")
+
 #data=data.drop(['learner_timestamp'],axis=1)#COMMENT FOR AMAZON DATASETS
 #data=pd.read_csv("dataframe.csv")
 data=data.drop(['Unnamed: 0'],axis=1)
@@ -263,7 +263,7 @@ data = data[data['course_id'].isin(frequent_courses)]
 
 
 data=data.sort_values(by='learner_id', ignore_index=True)
-data=data.iloc[0:50000,:]
+
 data= data.astype({'learner_id': 'int32', 'course_id': 'int32', 'learner_rating': 'int32'})
 print("STRUCTURE =",data.dtypes)
 #print("DETAILED INFO=", data.info())
@@ -583,7 +583,6 @@ for index,row in graph_data.iterrows():
 #print("Maximum length of sequence: {0}\n".format(max_len))
 #print("Minimum length of sequence: {0}\n".format(min_len))
 
-'''
 
 #TRAINING
 metrics=[]
@@ -759,7 +758,7 @@ json.dump(num, open(os.path.join('user_item_num.json'), 'w'))
 
 
 
-'''
+
 
 
 #no_of_clust=data['no_of_clust']
@@ -1066,14 +1065,10 @@ print("recall=	",best_r)
 print("ndcg",best_ndcg)
 print("F1=	", 2*(best_p*best_r+.000001/(best_p+best_r+.000001)))
 print("HR=	",HR/total)
-print("mndcg=	",NDCG)
-print("avgp=",agg_p/total)
-print("avgr=",agg_r/total)
 
 
 
-print("\n")
-print("\n")
+
 
 print("results_po")
       
@@ -1086,18 +1081,7 @@ print("F1=	", 2*(best_p_partial*best_r_partial+.00001/(best_p_partial+best_r_par
 print("HR=	",HR_partial/total)   
 print("ndcg=	",best_ndcg_partial)
 
-print("avgp=",agg_p_partial/total)
-print("avgr=",agg_r_partial/total)
-print("avgndcg=	",NDCG_partial)
-      
 
-print("for results")
-
-print("partial_list:",partial_list)#partially ordered rec list
-print("NOSFG reclist:",reclist)#rec list
-print("original_test:",original_test)#courses done by the user in test set
-print("course_list_ult:",course_list_ult)#whole courses done by the user
-#print("paths",paths)
 '''
 
 #to get path containing a vertex:
