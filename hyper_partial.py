@@ -21,6 +21,7 @@ import pandas as pd
 import tensorflow as tf
 import scipy
 
+
 #from tqdm import tqdm
 from util import *
 import json
@@ -217,16 +218,9 @@ def encode_user_item(data, user2idx, item2idx):
     :param item2idx:
     :return:
     """
-    data= data.astype({'learner_id': 'int32', 'course_id': 'int32', 'learner_rating': 'int32'})
-    data['learner_id'] = data['learner_id'].map(user2idx).astype('int32')
-    data['course_id'] = data['course_id'].map(item2idx).astype('int32')
     
-    # Ensure learner_rating is int32
-    data['learner_rating'] = data['learner_rating'].astype('int32')
-    missing_users = data[~data['learner_id'].isin(user2idx.keys())]
-    missing_courses = data[~data['course_id'].isin(item2idx.keys())]
-    print("Missing Learner IDs:", missing_users)
-    print("Missing Course IDs:", missing_courses)
+    data['learner_id'] = pd.Series(map(lambda x: user2idx[x], data['learner_id']))
+    data['course_id'] = pd.Series(map(lambda x: item2idx[x], data['course_id']))
     print("num of rows=",data.count()) 
     return data    
 
@@ -236,15 +230,15 @@ def str2bool(s):
     return s == 'True'
 
 
-os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
+#os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
 
 print("*************************************************")
 print("*************************************************")
 #data=pd.read_csv("data/behaviour.csv")
 
-data=pd.read_csv("ml1mdataextract.csv")
+data=pd.read_csv("dataextract.csv")
 data= data.astype({'learner_id': 'int32', 'course_id': 'int32', 'learner_rating': 'int32'})
-
+print("COCO")
 #data=data.drop(['learner_timestamp'],axis=1)#COMMENT FOR AMAZON DATASETS
 #data=pd.read_csv("dataframe.csv")
 data=data.drop(['Unnamed: 0'],axis=1)
@@ -263,10 +257,9 @@ data = data[data['course_id'].isin(frequent_courses)]
 
 
 data=data.sort_values(by='learner_id', ignore_index=True)
-
-data= data.astype({'learner_id': 'int32', 'course_id': 'int32', 'learner_rating': 'int32'})
+data=data.iloc[0:1000,:]
 print("STRUCTURE =",data.dtypes)
-#print("DETAILED INFO=", data.info())
+print("DETAILED INFO=", data.info())
 backup_data=data
 
 #print("before",data.count())
@@ -291,33 +284,7 @@ unique_item_ids = item_id2num.index
 
 #print("unique_user_ids",unique_user_ids)
 #print("unique_item_ids ",unique_item_ids)
-unique_user_ids = data['learner_id'].unique()
-unique_item_ids = data['course_id'].unique()
 
-# Create mappings for user IDs and item IDs
-user2idx = {user_id: idx for idx, user_id in enumerate(unique_user_ids)}
-item2idx = {item_id: idx for idx, item_id in enumerate(unique_item_ids)}
-
-data['learner_id'] = data['learner_id'].map(user2idx)
-data['course_id'] = data['course_id'].map(item2idx)
-
-# Check for any missing values after mapping
-missing_users = data['learner_id'].isnull().sum()
-missing_courses = data['course_id'].isnull().sum()
-
-#print("Missing Learner IDs after mapping:", missing_users)
-#print("Missing Course IDs after mapping:", missing_courses)
-
-# Output the modified DataFrame and its structure
-#print("Modified DataFrame:\n", data.head())
-#print("Structure after mapping:", data.dtypes)
-
-data= data.astype({'learner_id': 'int32', 'course_id': 'int32', 'learner_rating': 'int32'})
-
-print("num of rows=",data.count()) 
-
-
-'''
 user2idx={}
 list1=data.learner_id.unique()
 #print(list1)
@@ -332,13 +299,11 @@ list2=data.course_id.unique()
 for i in enumerate(unique_item_ids):
 	item2idx[list2[i[0]]]=i[0];
 
-'''
+
 # Encode raw data
 #print("DATA INITIALLY")
 #print(data)
-data= data.astype({'learner_id': 'int32', 'course_id': 'int32', 'learner_rating': 'int32'})
-#data = encode_user_item(data, user2idx, item2idx)
-
+data = encode_user_item(data, user2idx, item2idx)
 graph_data=data
 #print("GRAPH DATA INITIALLY")
 #print(graph_data)
@@ -600,7 +565,14 @@ poly_reg_model = LinearRegression()
 poly_reg_model.fit(X_train, y_train)
 #print("X",X_test)
 poly_reg_y_predicted = poly_reg_model.predict(X_test)
-
+kmeans = KMeans(n_clusters=81, random_state=0).fit(X)
+centers=kmeans.cluster_centers_
+#print("CLUSTER CENTERS:",kmeans.cluster_centers_)
+#inertia = kmeans.inertia_
+label = kmeans.labels_
+#print("INERTIA:",inertia)
+n_features=kmeans.n_features_in_
+#print("FEATURES:",n_features)
 for no_of_clust in range(5,usernum-3,1):
 
 
@@ -611,9 +583,9 @@ for no_of_clust in range(5,usernum-3,1):
 	lsshc=LSSHC(mode_framework='eigen_trick', mode_Z_construction='knn', mode_Z_construction_knn='random',
                  mode_sampling_schema='HSV', mode_sampling_approach='random', m_hyperedge=usernum+1, l_hyperedge =math.ceil((usernum+1)*.5),
                  knn_s=5, k=no_of_clust)
-	label,n_features,centers=lsshc.fit(adj_mat)
+	X=lsshc.fit(adj_mat)
 
-	train_list=train_data.learner_id.unique().tolist()
+	train_list=df_train.learner_id.unique().tolist()
 	tp=0
 	fp=0
 	total=0
@@ -718,12 +690,14 @@ for no_of_clust in range(5,usernum-3,1):
 		NDCG_partial+=ndcg_val
 		if best_ndcg_partial<ndcg_val and ndcg_val<1:
 			best_ndcg_partial=ndcg_val
-      		
-      		
-      		set_partial=set(partial_ordered_rec_list)
-      		try:
+			
+		set_partial=set(partial_ordered_rec_list)
+		
+		
+		try:
 			p_partial=p_partial+len(set_partial & set2)/len(set_partial)
 			r_partial=r_partial+len(set_partial & set2)/len(course_list_original)
+			
 			
 		except:
 			print("division by zero")
@@ -759,8 +733,8 @@ json.dump(num, open(os.path.join('user_item_num.json'), 'w'))
 
 
 
-
-
+f = open('user_item_num.json')
+data = json.load(f)
 #no_of_clust=data['no_of_clust']
 no_of_clust=usernum-5
 
@@ -793,7 +767,7 @@ n_features=kmeans.n_features_in_
 #TESTING
 #TOP-N PREDICTIONS
 #Top n predictions for the users in test data 
-data_reg=pd.read_csv("ml1mdata_fuzzy.csv")#created using the code fuzzy_dataset.py
+data_reg=pd.read_csv("data_fuzzy.csv")#created using the code fuzzy_dataset.py
 #data_reg=pd.read_csv("behaviourdata_fuzzy.csv")#created using the code fuzzy_dataset.py
 data_reg=data_reg[['learner_id','course_id','learner_rating','n_course_avg_rating','n_Counts']]
 #data_reg=data_reg[['n_course_avg_rating','n_Counts','n_instructr_perf','learner_rating']]
@@ -1062,13 +1036,14 @@ print("results")
 
 print("precision=	",best_p)
 print("recall=	",best_r)
-print("ndcg",best_ndcg)
+print("bndcg",best_ndcg)
 print("F1=	", 2*(best_p*best_r+.000001/(best_p+best_r+.000001)))
 print("HR=	",HR/total)
 
 
 
-
+print("\n")
+print("\n")
 
 print("results_po")
       
@@ -1082,8 +1057,17 @@ print("HR=	",HR_partial/total)
 print("ndcg=	",best_ndcg_partial)
 
 
-'''
+      
 
+print("for results")
+
+print("partial_list:",partial_list)#partially ordered rec list
+print("NOSFG reclist:",reclist)#rec list
+print("original_test:",original_test)#courses done by the user in test set
+print("course_list_ult:",course_list_ult)#whole courses done by the user
+#print("paths",paths)
+
+'''
 #to get path containing a vertex:
 print("path for NSFHG")
 print("reclist[0]:",reclist[0])
@@ -1115,6 +1099,12 @@ for path in paths_with_target_vertex:
 
 
 		
+
+
+	
+
+
+
 
 
 	
