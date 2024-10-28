@@ -1,1 +1,0 @@
-data_fuzz.csv is a processed dataset of the original dataset COCO. Please collect the original dataset from the authors of "COCO: Semantic-Enriched Collection of Online Courses at Scale with Experimental Use Cases". 
